@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - AI Student Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --bg-color: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-color: #1F2937;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+        }
+
+        /* Login Modal */
+        #login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 300px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #4338CA;
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: none;
+        }
+
+        .form-section {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px 20px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        th {
+            background-color: #F9FAFB;
+            font-weight: 600;
+        }
+
+        .action-btn {
+            background-color: #EF4444;
+            padding: 6px 12px;
+            width: auto;
+            font-size: 0.85rem;
+        }
+
+        .action-btn:hover {
+            background-color: #DC2626;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-modal">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" value="admin">
+            <input type="password" id="password" placeholder="Password" value="admin123">
+            <button onclick="login()">Login</button>
+            <p id="login-error" style="color: red; display: none; text-align: center; margin-top: 10px;">Invalid
+                credentials</p>
+        </div>
+    </div>
+
+    <div id="dashboard" class="container">
+        <h1>Knowledge Base Management</h1>
+
+        <div class="form-section">
+            <h3>Add New FAQ</h3>
+            <input type="text" id="new-question" placeholder="Question">
+            <textarea id="new-answer" placeholder="Answer"
+                style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; min-height: 80px; box-sizing: border-box; margin: 10px 0; font-family: inherit;"></textarea>
+            <button onclick="addFAQ()" style="width: auto;">Add FAQ</button>
+        </div>
+
+        <h3>Existing FAQs</h3>
+        <table id="faq-table">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Answer</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be added here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('access_token');
+
+        if (token) {
+            showDashboard();
+        }
+
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    token = data.token;
+                    localStorage.setItem('access_token', token);
+                    showDashboard();
+                } else {
+                    document.getElementById('login-error').style.display = 'block';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            loadFAQs();
+        }
+
+        async function loadFAQs() {
+            const res = await fetch('/api/faqs');
+            if (res.ok) {
+                const faqs = await res.json();
+                const tbody = document.querySelector('#faq-table tbody');
+                tbody.innerHTML = '';
+                faqs.forEach(faq => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${faq.question}</td>
+                        <td>${faq.answer}</td>
+                        <td><button class="action-btn" onclick="deleteFAQ('${faq.id}')">Delete</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        async function addFAQ() {
+            const q = document.getElementById('new-question').value;
+            const a = document.getElementById('new-answer').value;
+            if (!q || !a) return alert("Please fill both fields");
+
+            const res = await fetch('/api/faqs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ question: q, answer: a })
+            });
+
+            if (res.ok) {
+                document.getElementById('new-question').value = '';
+                document.getElementById('new-answer').value = '';
+                loadFAQs();
+            } else {
+                alert("Failed to add FAQ. Are you logged in?");
+            }
+        }
+
+        async function deleteFAQ(id) {
+            if (!confirm("Are you sure?")) return;
+            const res = await fetch('/api/faqs/' + id, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            if (res.ok) loadFAQs();
+            else alert("Failed to delete");
+        }
+    </script>
+</body>
+
+</html>
