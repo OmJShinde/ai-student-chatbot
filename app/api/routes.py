@@ -33,6 +33,22 @@ async def chat(request: ChatRequest, db: DatabaseInterface = Depends(get_db)):
         if original_query != corrected_query:
             print(f"Corrected '{original_query}' to '{corrected_query}'")
 
+        # Basic Greeting Logic
+        greetings = {
+            "hi": "Hello! How can I help you today?",
+            "hello": "Hi there! What can I do for you?",
+            "hey": "Hey! Need any help with campus info?",
+            "good morning": "Good morning! How can I assist you?",
+            "good afternoon": "Good afternoon! What's on your mind?",
+            "good evening": "Good evening! How can I help?",
+            "how are you": "I'm just a bot, but I'm functioning perfectly! How can I help you?",
+            "who are you": "I am the Student Support Bot. specialized in answering queries about the campus, exams, and facilities."
+        }
+        
+        clean_query = corrected_query.lower().strip("!?. ")
+        if clean_query in greetings:
+            return ChatResponse(answer=greetings[clean_query], confidence=1.0)
+
         # 1. Fetch all FAQs
         faqs = await db.get_all_faqs()
         if not faqs:
